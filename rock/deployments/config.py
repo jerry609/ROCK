@@ -197,6 +197,43 @@ class RemoteDeploymentConfig(DeploymentConfig):
         return RemoteDeployment.from_config(self)
 
 
+class LightweightDeploymentConfig(DeploymentConfig):
+    """Configuration for lightweight deployment without Docker/Ray dependencies.
+
+    This deployment type runs sandboxes directly on the local machine with
+    optional process isolation using platform-native mechanisms:
+    - sandbox-exec on macOS (syscall filtering)
+    - bubblewrap on Linux (namespace isolation)
+    """
+
+    isolation_mode: Literal["none", "sandbox-exec", "bubblewrap", "auto"] = "auto"
+    """Isolation mode: 'none' (no isolation), 'sandbox-exec' (macOS),
+    'bubblewrap' (Linux), or 'auto' (auto-detect best available)."""
+
+    working_dir: str | None = None
+    """Working directory for the sandbox."""
+
+    env_vars: dict[str, str] = Field(default_factory=dict)
+    """Additional environment variables for the sandbox."""
+
+    allow_network: bool = True
+    """Whether to allow network access (for isolated modes)."""
+
+    allow_read_paths: list[str] = Field(default=["/"])
+    """Paths allowed for reading (for isolated modes)."""
+
+    allow_write_paths: list[str] = Field(default_factory=list)
+    """Paths allowed for writing (for isolated modes)."""
+
+    type: Literal["lightweight"] = "lightweight"
+    """Deployment type discriminator for serialization/deserialization and CLI parsing. Should not be modified."""
+
+    def get_deployment(self) -> AbstractDeployment:
+        from rock.deployments.lightweight import LightweightDeployment
+
+        return LightweightDeployment.from_config(self)
+
+
 def get_deployment(config: DeploymentConfig) -> AbstractDeployment:
     """Create a deployment instance from the given configuration.
 
